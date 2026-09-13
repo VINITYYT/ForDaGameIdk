@@ -13,12 +13,22 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Endpoint: Fetch Guild Members via Discord REST API
+// Helper: Extract token from any possible location
+function extractToken(req) {
+  const queryToken = req.query.token;
+  const headerToken = req.headers['x-bot-token'];
+  const authHeader = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '').trim() : null;
+  const envToken = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;
+
+  return queryToken || headerToken || authHeader || envToken;
+}
+
+// Endpoint: Fetch Guild Members
 app.get('/api/members', async (req, res) => {
   const { guildId } = req.query;
-  const botToken = req.headers['x-bot-token'] || process.env.DISCORD_TOKEN;
+  const botToken = extractToken(req);
 
-  if (!botToken) {
+  if (!botToken || botToken.trim() === '') {
     return res.status(400).json({ error: 'No Bot Token provided! Please enter your Bot Token in Settings.' });
   }
 
@@ -26,11 +36,9 @@ app.get('/api/members', async (req, res) => {
     return res.status(400).json({ error: 'Guild ID is required.' });
   }
 
-  // Initialize REST client with user's token
-  const rest = new REST({ version: '10' }).setToken(botToken);
+  const rest = new REST({ version: '10' }).setToken(botToken.trim());
 
   try {
-    // Fetch up to 1000 members directly via HTTP REST
     const members = await rest.get(Routes.guildMembers(guildId), {
       query: new URLSearchParams({ limit: 1000 })
     });
@@ -61,12 +69,12 @@ app.get('/api/members', async (req, res) => {
   }
 });
 
-// Endpoint: Submit Record to Discord Channel via REST API
+// Endpoint: Submit Record to Discord Channel
 app.post('/api/submit-record', async (req, res) => {
   const { channelId, caseNumber, user, vehicle, color, duration } = req.body;
-  const botToken = req.headers['x-bot-token'] || process.env.DISCORD_TOKEN;
+  const botToken = extractToken(req);
 
-  if (!botToken) {
+  if (!botToken || botToken.trim() === '') {
     return res.status(400).json({ error: 'No Bot Token provided! Enter your Bot Token in Settings.' });
   }
 
@@ -74,7 +82,7 @@ app.post('/api/submit-record', async (req, res) => {
     return res.status(400).json({ error: 'Target Channel ID is required.' });
   }
 
-  const rest = new REST({ version: '10' }).setToken(botToken);
+  const rest = new REST({ version: '10' }).setToken(botToken.trim());
 
   try {
     const embed = new EmbedBuilder()
