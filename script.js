@@ -252,20 +252,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Bot Token Enter Confirmation Flash
+ // Enter Key Visual Flash Confirmation
   botTokenInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
-      localStorage.setItem('botToken', botTokenInput.value.trim());
+      const val = botTokenInput.value.trim();
+      localStorage.setItem('botToken', val);
       botTokenInput.classList.add('flash-green');
       setTimeout(() => botTokenInput.classList.remove('flash-green'), 800);
     }
   });
 
-  // Live update Guild ID on typing or pasting
-  ['input', 'change', 'keyup'].forEach(eventType => {
-    guildIdInput.addEventListener(eventType, () => {
-      localStorage.setItem('guildId', guildIdInput.value.trim());
-      updateBotDashboard();
+  // --- BOT TOKEN AUTO-SAVE FIX ---
+  // Automatically save token on typing, pasting, or clicking away
+  ['input', 'change', 'keyup', 'blur'].forEach(eventType => {
+    botTokenInput.addEventListener(eventType, () => {
+      const val = botTokenInput.value.trim();
+      if (val) {
+        localStorage.setItem('botToken', val);
+      }
     });
   });
 
