@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Discord Bot Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="theme-dark">
+
+  <!-- Header & Settings Navigation -->
+  <header class="navbar">
+    <div class="logo">⚡ Bot Manager</div>
+
+    <div class="settings-container">
+      <button id="settingsBtn" class="settings-btn">⚙️ Settings ▾</button>
+
+      <!-- Settings Dropdown Menu -->
+      <div id="settingsDropdown" class="settings-dropdown hidden">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="websiteTab">Website</button>
+          <button class="tab-btn" data-tab="discordTab">Discord</button>
+        </div>
+
+        <!-- WEBSITE TAB -->
+        <div id="websiteTab" class="tab-content active">
+          <div class="input-group">
+            <label for="themeSelect">Website Theme</label>
+            <select id="themeSelect">
+              <option value="theme-dark">Dark Mode</option>
+              <option value="theme-light">Light Mode</option>
+              <option value="theme-cyber">Cyberpunk</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- DISCORD TAB -->
+        <div id="discordTab" class="tab-content">
+          <!-- Bot Token with Lock Toggle -->
+          <div class="input-group">
+            <label for="botToken">Discord Bot Token</label>
+            <div class="lock-wrapper">
+              <input type="password" id="botToken" placeholder="Paste Bot Token here..." disabled />
+              <button id="lockToggleBtn" class="lock-btn locked" title="Toggle Lock">🔒</button>
+            </div>
+          </div>
+
+          <!-- Guild ID -->
+          <div class="input-group">
+            <label for="guildId">Start To This Discord Server (GUID)</label>
+            <input type="text" id="guildId" placeholder="e.g. 123456789012345678" />
+          </div>
+
+          <hr class="divider" />
+
+          <!-- Bot Name with Flash Animations -->
+          <div class="input-group">
+            <label id="botNameLabel">
+              Discord Bot Name <span id="errorTag" class="error-tag hidden">( ERROR )</span>
+            </label>
+            <input type="text" id="botName" placeholder="Enter Bot Name and press Enter..." />
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Dashboard -->
+  <main class="dashboard">
+    <h1>Connected Bots</h1>
+    <div id="botCardsContainer" class="bot-grid">
+      <!-- Dynamic Bot Cards will render here -->
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

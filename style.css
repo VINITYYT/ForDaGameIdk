@@ -1,0 +1,156 @@
+:root {
+  --bg-color: #121214;
+  --card-bg: #1e1e24;
+  --text-color: #f0f0f5;
+  --accent-color: #5865f2;
+  --border-color: #2d2d35;
+  --green-flash: #2ecc71;
+  --red-flash: #e74c3c;
+}
+
+/* Themes */
+body.theme-light {
+  --bg-color: #f4f5f8;
+  --card-bg: #ffffff;
+  --text-color: #1a1a1e;
+  --border-color: #dcdce6;
+}
+
+body.theme-cyber {
+  --bg-color: #0d0221;
+  --card-bg: #0f0826;
+  --text-color: #00f0ff;
+  --accent-color: #ff007f;
+  --border-color: #ff007f;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Dropdown Container */
+.settings-container { position: relative; }
+
+.settings-btn {
+  background: var(--accent-color);
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.settings-dropdown {
+  position: absolute;
+  right: 0;
+  top: 45px;
+  width: 320px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  padding: 1rem;
+  z-index: 100;
+}
+
+.hidden { display: none !important; }
+
+/* Tabs */
+.tabs { display: flex; gap: 8px; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
+.tab-btn {
+  background: none;
+  border: none;
+  color: var(--text-color);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.tab-btn.active { opacity: 1; border-bottom: 2px solid var(--accent-color); font-weight: bold; }
+
+/* Form Elements */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.input-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 5px; }
+.input-group label { font-size: 0.85rem; font-weight: 600; }
+
+input[type="text"], input[type="password"], select {
+  width: 100%;
+  padding: 0.6rem;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  border-radius: 5px;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Lock Wrapper */
+.lock-wrapper { display: flex; gap: 5px; }
+.lock-btn {
+  background: #333;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  padding: 0 10px;
+  cursor: pointer;
+  filter: grayscale(100%);
+  opacity: 0.6;
+  transition: all 0.2s;
+}
+.lock-btn.unlocked {
+  filter: grayscale(0%);
+  opacity: 1;
+  background: var(--accent-color);
+}
+
+.divider { border: 0; height: 1px; background: var(--border-color); margin: 1rem 0; }
+
+/* Dynamic Animations for Bot Name Input */
+input.flash-green {
+  border-color: var(--green-flash) !important;
+  box-shadow: 0 0 8px var(--green-flash);
+}
+
+input.flash-red {
+  border-color: var(--red-flash) !important;
+  box-shadow: 0 0 8px var(--red-flash);
+}
+
+.error-tag {
+  color: var(--red-flash);
+  font-weight: bold;
+  opacity: 1;
+  transition: opacity 1s ease-out;
+}
+.error-tag.fade-out { opacity: 0; }
+
+/* Main Dashboard Cards */
+.dashboard { padding: 2rem; }
+.bot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.bot-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.status-indicator { width: 12px; height: 12px; border-radius: 50%; background: var(--green-flash); }
