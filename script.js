@@ -79,15 +79,85 @@ document.addEventListener('DOMContentLoaded', () => {
     colorSelect.value = e.target.value;
   });
 
-  // Helper to reliably get stored token (checks UI input and LocalStorage)
+  // --- BOT TOKEN & GREEN LOCK OBFUSCATION CONTROLLER ---
+  let realBotToken = localStorage.getItem('botToken') || '';
+
+  // Reliable token retriever for API calls
   function getStoredToken() {
-    const el = document.getElementById('botToken');
-    const val = el ? el.value.trim() : '';
-    const storageVal = localStorage.getItem('botToken') || '';
-    return val || storageVal;
+    return realBotToken || localStorage.getItem('botToken') || '';
   }
 
-  // Fetch Guild Members API Call
+  // Lock and obfuscate field visually using native password masking
+  function lockAndObfuscateToken() {
+    const currentInputVal = botTokenInput.value.trim();
+    if (currentInputVal && currentInputVal !== realBotToken) {
+      realBotToken = currentInputVal;
+    }
+
+    if (realBotToken) {
+      localStorage.setItem('botToken', realBotToken);
+      botTokenInput.value = realBotToken;
+      botTokenInput.type = 'password'; // Masks text natively with dots without corrupting string
+      botTokenInput.setAttribute('disabled', 'true');
+      
+      // Turn Lock Button GREEN
+      lockToggleBtn.style.backgroundColor = '#22c55e';
+      lockToggleBtn.style.borderColor = '#22c55e';
+      lockToggleBtn.style.color = '#ffffff';
+      lockToggleBtn.classList.add('locked-green');
+    }
+  }
+
+  // Unlock and un-obfuscate field visually
+  function unlockTokenField() {
+    botTokenInput.removeAttribute('disabled');
+    botTokenInput.type = 'text'; // Reveal plain text for editing
+    botTokenInput.value = realBotToken;
+    botTokenInput.focus();
+
+    // Reset Lock Button styling
+    lockToggleBtn.style.backgroundColor = '';
+    lockToggleBtn.style.borderColor = '';
+    lockToggleBtn.style.color = '';
+    lockToggleBtn.classList.remove('locked-green');
+  }
+
+  // Lock Toggle Button Event Listener
+  lockToggleBtn.addEventListener('click', () => {
+    const isLocked = botTokenInput.hasAttribute('disabled');
+    if (isLocked) {
+      unlockTokenField();
+    } else {
+      lockAndObfuscateToken();
+    }
+  });
+
+  // Press ENTER on Bot Token input to submit, lock, turn green, and mask
+  botTokenInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const inputVal = botTokenInput.value.trim();
+      if (inputVal) {
+        realBotToken = inputVal;
+        lockAndObfuscateToken();
+
+        // Green flash animation
+        botTokenInput.classList.add('flash-green');
+        setTimeout(() => botTokenInput.classList.remove('flash-green'), 800);
+      }
+    }
+  });
+
+  // Real-time update while typing in unlocked mode
+  botTokenInput.addEventListener('input', () => {
+    if (!botTokenInput.hasAttribute('disabled')) {
+      realBotToken = botTokenInput.value.trim();
+      if (realBotToken) {
+        localStorage.setItem('botToken', realBotToken);
+      }
+    }
+  });
+
+  // --- FETCH DISCORD GUILD MEMBERS ---
   loadUsersBtn.addEventListener('click', async () => {
     const rawGuildId = guildIdInput ? guildIdInput.value.trim() : '';
     const guildId = rawGuildId || localStorage.getItem('guildId');
@@ -106,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       loadUsersBtn.textContent = 'Loading...';
 
-      // Send token via URL parameter, custom header, and Bearer auth header
+      // Send token via URL parameter, custom header, and Bearer header
       const res = await fetch(`/api/members?guildId=${encodeURIComponent(guildId)}&token=${encodeURIComponent(token)}`, {
         headers: {
           'x-bot-token': token,
@@ -136,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Sequential Step Reveals
+  // --- FORM SEQUENTIAL STEP REVEALS ---
   userSelect.addEventListener('change', () => {
     if (userSelect.value) {
       vehicleGroup.classList.remove('hidden');
@@ -157,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return Math.random().toString(36).substring(2, 7).toUpperCase();
   }
 
-  // Submit Record Handler
+  // --- SUBMIT RECORD HANDLER ---
   submitRecordBtn.addEventListener('click', async () => {
     let caseNo = document.getElementById('caseNumber').value.trim();
     if (!caseNo) {
@@ -210,20 +280,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- SETTINGS DROPDOWN & DASHBOARD LOGIC ---
 
-  // Toggle Settings Popup
+  // Settings Menu Toggle
   settingsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsDropdown.classList.toggle('hidden');
   });
 
-  // Close Dropdown when clicking outside
+  // Close Settings on Click Outside
   document.addEventListener('click', (e) => {
     if (!settingsDropdown.contains(e.target) && !settingsBtn.contains(e.target)) {
       settingsDropdown.classList.add('hidden');
     }
   });
 
-  // Tab Switching
+  // Settings Tab Navigation
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       tabBtns.forEach(b => b.classList.remove('active'));
@@ -233,47 +303,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Website Theme Switcher
+  // Theme Switcher
   themeSelect.addEventListener('change', (e) => {
     document.body.className = e.target.value;
     localStorage.setItem('theme', e.target.value);
   });
 
-  // Token Lock / Unlock Toggle
-  let isTokenUnlocked = false;
-  lockToggleBtn.addEventListener('click', () => {
-    isTokenUnlocked = !isTokenUnlocked;
-    if (isTokenUnlocked) {
-      botTokenInput.removeAttribute('disabled');
-      lockToggleBtn.classList.add('unlocked');
-    } else {
-      botTokenInput.setAttribute('disabled', 'true');
-      lockToggleBtn.classList.remove('unlocked');
-    }
-  });
-
- // Enter Key Visual Flash Confirmation
-  botTokenInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      const val = botTokenInput.value.trim();
-      localStorage.setItem('botToken', val);
-      botTokenInput.classList.add('flash-green');
-      setTimeout(() => botTokenInput.classList.remove('flash-green'), 800);
-    }
-  });
-
-  // --- BOT TOKEN AUTO-SAVE FIX ---
-  // Automatically save token on typing, pasting, or clicking away
-  ['input', 'change', 'keyup', 'blur'].forEach(eventType => {
-    botTokenInput.addEventListener(eventType, () => {
-      const val = botTokenInput.value.trim();
-      if (val) {
-        localStorage.setItem('botToken', val);
-      }
+  // Live Update & Storage for Guild ID Input
+  ['input', 'change', 'keyup'].forEach(eventType => {
+    guildIdInput.addEventListener(eventType, () => {
+      localStorage.setItem('guildId', guildIdInput.value.trim());
+      updateBotDashboard();
     });
   });
 
-  // Guild ID Enter Confirmation Flash
   guildIdInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       localStorage.setItem('guildId', guildIdInput.value.trim());
@@ -306,13 +349,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Dynamic Bot Card Dashboard Updates
+  // Dynamic Bot Card Dashboard Renderer
   function updateBotDashboard() {
     const botName = localStorage.getItem('botName') || botNameInput.value.trim();
     const guildId = guildIdInput.value.trim() || localStorage.getItem('guildId');
 
     const container = document.getElementById('botCardsContainer');
     const count = document.getElementById('botCount');
+
+    if (!container || !count) return;
 
     container.innerHTML = '';
     if (botName) {
@@ -342,9 +387,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.className = savedTheme;
     themeSelect.value = savedTheme;
 
-    botTokenInput.value = localStorage.getItem('botToken') || '';
     guildIdInput.value = localStorage.getItem('guildId') || '';
     botNameInput.value = localStorage.getItem('botName') || '';
+
+    // Initialize Bot Token lock and mask if token exists
+    if (realBotToken) {
+      botTokenInput.value = realBotToken;
+      lockAndObfuscateToken();
+    } else {
+      botTokenInput.value = '';
+    }
 
     updateBotDashboard();
   };
