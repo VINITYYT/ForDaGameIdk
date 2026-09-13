@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const guildIdInput = document.getElementById('guildId');
   const botNameInput = document.getElementById('botName');
   const errorTag = document.getElementById('errorTag');
-  
+
   // DOM Elements - Manage Add Record Form
   const userSelect = document.getElementById('userSelect');
   const loadUsersBtn = document.getElementById('loadUsersBtn');
@@ -81,18 +81,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Fetch Guild Members API Call
   loadUsersBtn.addEventListener('click', async () => {
-    const guildId = guildIdInput.value.trim() || localStorage.getItem('guildId');
-    if (!guildId) {
+    const rawGuildId = guildIdInput ? guildIdInput.value.trim() : '';
+    const guildId = rawGuildId || localStorage.getItem('guildId');
+
+    if (!guildId || guildId === '') {
       alert('Please enter a Guild ID in Settings > Discord first!');
       return;
     }
 
     try {
       loadUsersBtn.textContent = 'Loading...';
-      const res = await fetch(`/api/members?guildId=${guildId}`);
+
+      const res = await fetch(`/api/members?guildId=${encodeURIComponent(guildId)}`);
       const data = await res.json();
 
-      if (data.error) throw new Error(data.error);
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to fetch members');
+      }
 
       userSelect.innerHTML = '<option value="">-- Choose User --</option>';
       data.forEach(user => {
@@ -216,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Bot Token Enter Confirmation Flash
   botTokenInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       localStorage.setItem('botToken', botTokenInput.value.trim());
@@ -224,12 +230,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Save & Live Update Guild ID on input and change
+  // Live update Guild ID on typing or pasting
   ['input', 'change', 'keyup'].forEach(eventType => {
     guildIdInput.addEventListener(eventType, () => {
       localStorage.setItem('guildId', guildIdInput.value.trim());
       updateBotDashboard();
     });
+  });
+
+  // Guild ID Enter Confirmation Flash
+  guildIdInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      localStorage.setItem('guildId', guildIdInput.value.trim());
+      updateBotDashboard();
+      guildIdInput.classList.add('flash-green');
+      setTimeout(() => guildIdInput.classList.remove('flash-green'), 800);
+    }
   });
 
   // Bot Name Handler with Validation Flashes
