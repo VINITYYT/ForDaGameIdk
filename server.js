@@ -17,9 +17,15 @@ const client = new Client({
   ]
 });
 
-// Start bot if token is provided via environment variable
-if (process.env.DISCORD_TOKEN) {
-  client.login(process.env.DISCORD_TOKEN).catch(console.error);
+// Check both DISCORD_TOKEN and DISCORD_BOT_TOKEN environment variable names
+const BOT_TOKEN = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;
+
+if (BOT_TOKEN) {
+  client.login(BOT_TOKEN)
+    .then(() => console.log(`[BOT READY] Logged in as ${client.user.tag}`))
+    .catch(err => console.error("[BOT ERROR] Login failed:", err.message));
+} else {
+  console.warn("[BOT WARNING] No DISCORD_TOKEN or DISCORD_BOT_TOKEN set in environment variables!");
 }
 
 // Serve Main Page
@@ -30,22 +36,49 @@ app.get('/', (req, res) => {
 // Endpoint: Fetch Guild Members
 app.get('/api/members', async (req, res) => {
   const { guildId } = req.query;
-  if (!guildId) return res.status(400).json({ error: 'Guild ID is required' });
+
+  if (!guildId) {
+    return res.status(400).json({ error: 'Guild ID is required' });
+  }
+
+  // Check if bot is logged in
+  if (!client.isReady()) {
+    return res.status(500).json({ 
+      error: 'Bot is not logged in! Make sure DISCORD_TOKEN or DISCORD_BOT_TOKEN is set in Render Environment Variables.' 
+    });
+  }
 
   try {
     const guild = await client.guilds.fetch(guildId);
-    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+    if (!guild) {
+      return res.status(404).json({ error: 'Guild not found or bot is not in this server.' });
+    }
 
     const members = await guild.members.fetch();
-    const memberList = members.map(m => ({
-      id: m.user.id,
-      username: m.user.username,
-      displayName: m.displayName
-    }));
+    const memberList = members
+      .filter(m => !m.user.bot) // Filter out bot accounts
+      .map(m => ({
+        id: m.user.id,
+        username: m.user.username,
+        displayName: m.displayName || m.user.username
+      }));
 
     res.json(memberList);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch guild members. Make sure bot is in the server and Guild Members Intent is enabled in Discord Developer Portal.' });
+    console.error("--- Error in /api/members ---", err);
+
+    // Dynamic error handling to pinpoint exact problem
+    let detailedError = err.message || 'Failed to fetch guild members.';
+    
+    if (err.code === 50001) {
+      detailedError = "Bot lacks access/permissions or is not in that server.";
+    } else if (err.code === 50035 || err.message.includes('disallowed intents')) {
+      detailedError = "Guild Members Intent is disabled in Discord Developer Portal!";
+    } else if (err.code === 10004) {
+      detailedError = "Unknown Guild ID. Double check your server ID.";
+    }
+
+    res.status(500).json({ error: detailedError });
   }
 });
 
@@ -55,25 +88,30 @@ app.post('/api/submit-record', async (req, res) => {
 
   if (!channelId) return res.status(400).json({ error: 'Target Channel ID is required' });
 
+  if (!client.isReady()) {
+    return res.status(500).json({ error: 'Bot is not logged in.' });
+  }
+
   try {
     const channel = await client.channels.fetch(channelId);
     if (!channel) return res.status(404).json({ error: 'Channel not found' });
 
     const embed = new EmbedBuilder()
       .setTitle(`📋 New Record Registered: #${caseNumber}`)
-      .setColor(color.startsWith('#') ? color : '#5865F2')
+      .setColor(color && color.startsWith('#') ? color : '#5865F2')
       .addFields(
-        { name: 'Case Number', value: caseNumber, inline: true },
-        { name: 'User', value: user, inline: true },
-        { name: 'Vehicle', value: vehicle, inline: true },
-        { name: 'Color', value: color, inline: true },
-        { name: 'Expiration (24hr)', value: duration, inline: false }
+        { name: 'Case Number', value: caseNumber || 'N/A', inline: true },
+        { name: 'User', value: user || 'N/A', inline: true },
+        { name: 'Vehicle', value: vehicle || 'N/A', inline: true },
+        { name: 'Color', value: color || 'N/A', inline: true },
+        { name: 'Expiration (24hr)', value: duration || 'N/A', inline: false }
       )
       .setTimestamp();
 
     await channel.send({ embeds: [embed] });
     res.json({ success: true, message: 'Record posted successfully!' });
   } catch (err) {
+    console.error("--- Error in /api/submit-record ---", err);
     res.status(500).json({ error: err.message || 'Failed to send message to Discord channel' });
   }
 });
