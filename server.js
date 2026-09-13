@@ -13,12 +13,13 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Helper: Extract token from any possible location
 function extractToken(req) {
   const queryToken = req.query.token;
   const headerToken = req.headers['x-bot-token'];
   const authHeader = req.headers['authorization'] ? req.headers['authorization'].replace('Bearer ', '').trim() : null;
   const envToken = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;
+
+  console.log(`[API REQUEST] Token from Query: "${queryToken || ''}" | Header: "${headerToken || ''}" | Env: "${envToken ? 'EXISTS' : 'EMPTY'}"`);
 
   return queryToken || headerToken || authHeader || envToken;
 }
