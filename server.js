@@ -24,49 +24,55 @@ function extractToken(req) {
   return queryToken || headerToken || authHeader || envToken;
 }
 
-// Endpoint: Fetch Guild Members
+// --- FETCH DISCORD GUILD MEMBERS ---
 app.get('/api/members', async (req, res) => {
-  const { guildId } = req.query;
-  const botToken = extractToken(req);
-
-  if (!botToken || botToken.trim() === '') {
-    return res.status(400).json({ error: 'No Bot Token provided! Please enter your Bot Token in Settings.' });
-  }
-
-  if (!guildId) {
-    return res.status(400).json({ error: 'Guild ID is required.' });
-  }
-
-  const rest = new REST({ version: '10' }).setToken(botToken.trim());
-
   try {
-    const members = await rest.get(Routes.guildMembers(guildId), {
-      query: new URLSearchParams({ limit: 1000 })
+    const token = extractToken(req);
+    const guildId = req.query.guildId;
+
+    if (!token) {
+      return res.status(400).json({ error: 'No Bot Token provided!' });
+    }
+    if (!guildId) {
+      return res.status(400).json({ error: 'No Guild ID provided!' });
+    }
+
+    // Strip accidental "Bot " or "Bearer " prefixes if already attached
+    const cleanToken = token.replace(/^(Bot|Bearer)\s+/i, '').trim();
+
+    console.log(`[DISCORD FETCH] Requesting members for Guild: ${guildId}`);
+
+    // Call Discord REST API with required "Bot " authorization prefix
+    const discordRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members?limit=1000`, {
+      headers: {
+        'Authorization': `Bot ${cleanToken}`,
+        'Content-Type': 'application/json'
+      }
     });
 
-    const memberList = members
-      .filter(m => !m.user.bot)
+    const data = await discordRes.json();
+
+    if (!discordRes.ok) {
+      console.error('[DISCORD API REJECTED]', data);
+      return res.status(discordRes.status).json({ 
+        error: data.message || `Discord Error (${discordRes.status}): Check Bot Permissions or Server Members Intent`
+      });
+    }
+
+    // Map Discord member objects to clean display options
+    const members = data
+      .filter(m => !m.user.bot) // Filter out other bots
       .map(m => ({
         id: m.user.id,
         username: m.user.username,
         displayName: m.nick || m.user.global_name || m.user.username
       }));
 
-    res.json(memberList);
+    return res.json(members);
+
   } catch (err) {
-    console.error("--- Error in /api/members ---", err);
-
-    let errorMsg = err.message || 'Failed to fetch guild members.';
-
-    if (err.status === 401 || err.code === 0) {
-      errorMsg = 'Invalid Bot Token! Check your token in Settings > Discord.';
-    } else if (err.status === 403 || err.code === 50001) {
-      errorMsg = 'Bot is not in that server, or Server Members Intent is disabled in Discord Developer Portal!';
-    } else if (err.status === 404 || err.code === 10004) {
-      errorMsg = 'Unknown Guild ID. Double check your server ID in Settings.';
-    }
-
-    res.status(500).json({ error: errorMsg });
+    console.error('[SERVER ERROR]', err);
+    return res.status(500).json({ error: `Server error: ${err.message}` });
   }
 });
 
