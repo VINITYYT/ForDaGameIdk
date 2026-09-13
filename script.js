@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // DOM Elements
   const settingsBtn = document.getElementById('settingsBtn');
   const settingsDropdown = document.getElementById('settingsDropdown');
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -12,8 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const botNameInput = document.getElementById('botName');
   const errorTag = document.getElementById('errorTag');
   const botCardsContainer = document.getElementById('botCardsContainer');
+  const botCount = document.getElementById('botCount');
 
-  // Load Saved Settings from LocalStorage
+  // Load Saved Preferences
   const loadSavedSettings = () => {
     const savedTheme = localStorage.getItem('theme') || 'theme-dark';
     document.body.className = savedTheme;
@@ -26,12 +26,20 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBotDashboard();
   };
 
-  // 1. Toggle Dropdown Menu
-  settingsBtn.addEventListener('click', () => {
+  // Toggle Settings Popup
+  settingsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
     settingsDropdown.classList.toggle('hidden');
   });
 
-  // 2. Tab Switcher
+  // Close Dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!settingsDropdown.contains(e.target) && !settingsBtn.contains(e.target)) {
+      settingsDropdown.classList.add('hidden');
+    }
+  });
+
+  // Tab Navigation
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       tabBtns.forEach(b => b.classList.remove('active'));
@@ -42,49 +50,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 3. Website Theme Selector
+  // Theme Switcher
   themeSelect.addEventListener('change', (e) => {
     const selectedTheme = e.target.value;
     document.body.className = selectedTheme;
     localStorage.setItem('theme', selectedTheme);
   });
 
-  // 4. Token Lock/Unlock Button
+  // Lock / Unlock Bot Token Input
   let isTokenUnlocked = false;
   lockToggleBtn.addEventListener('click', () => {
     isTokenUnlocked = !isTokenUnlocked;
     if (isTokenUnlocked) {
       botTokenInput.removeAttribute('disabled');
-      lockToggleBtn.classList.remove('locked');
       lockToggleBtn.classList.add('unlocked');
-      lockToggleBtn.textContent = '🔓';
+      botTokenInput.focus();
     } else {
       botTokenInput.setAttribute('disabled', 'true');
       lockToggleBtn.classList.remove('unlocked');
-      lockToggleBtn.classList.add('locked');
-      lockToggleBtn.textContent = '🔒';
     }
   });
 
   botTokenInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       localStorage.setItem('botToken', botTokenInput.value);
-      alert('Bot Token Saved!');
-      updateBotDashboard();
+      botTokenInput.classList.add('flash-green');
+      setTimeout(() => botTokenInput.classList.remove('flash-green'), 800);
     }
   });
 
-  // 5. Save Server GUID
+  // Save Guild ID
   guildIdInput.addEventListener('input', () => {
     localStorage.setItem('guildId', guildIdInput.value);
+    updateBotDashboard();
   });
 
-  // 6. Bot Name Input Handler (Enter Key + Animations)
+  // Bot Name Handling (Enter validation + Flash Animations)
   botNameInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const name = botNameInput.value.trim();
 
-      // Trigger Red Error Flash if name is empty or less than 3 chars
       if (!name || name.length < 3) {
         triggerErrorState();
       } else {
@@ -94,7 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function triggerSuccessState(name) {
-    // Flash Green
     botNameInput.classList.remove('flash-red');
     botNameInput.classList.add('flash-green');
     
@@ -103,28 +107,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setTimeout(() => {
       botNameInput.classList.remove('flash-green');
-    }, 1000);
+    }, 800);
   }
 
   function triggerErrorState() {
-    // Flash Red & Show ERROR tag
     botNameInput.classList.remove('flash-green');
     botNameInput.classList.add('flash-red');
     
     errorTag.classList.remove('hidden', 'fade-out');
 
-    // Fade out ERROR label and border back to normal
     setTimeout(() => {
       errorTag.classList.add('fade-out');
       setTimeout(() => {
         errorTag.classList.add('hidden');
         errorTag.classList.remove('fade-out');
         botNameInput.classList.remove('flash-red');
-      }, 1000); // 1 sec fade transition
-    }, 1500);
+      }, 800);
+    }, 1200);
   }
 
-  // 7. Dynamic Main Dashboard Display
+  // Render Bot Cards on Dashboard
   function updateBotDashboard() {
     const botName = localStorage.getItem('botName');
     const guildId = localStorage.getItem('guildId');
@@ -132,18 +134,29 @@ document.addEventListener('DOMContentLoaded', () => {
     botCardsContainer.innerHTML = '';
 
     if (botName) {
+      botCount.textContent = "1 Active Bot";
+      const initial = botName.charAt(0).toUpperCase();
+
       const card = document.createElement('div');
       card.className = 'bot-card';
       card.innerHTML = `
-        <div class="status-indicator"></div>
-        <div>
+        <div class="avatar-wrapper">
+          <div class="bot-avatar">${initial}</div>
+          <div class="status-dot"></div>
+        </div>
+        <div class="bot-info">
           <h3>${botName}</h3>
-          <p style="font-size: 0.8rem; opacity: 0.7;">Server GUID: ${guildId || 'Not Set'}</p>
+          <p class="font-mono">GUID: ${guildId || 'Not Set'}</p>
         </div>
       `;
       botCardsContainer.appendChild(card);
     } else {
-      botCardsContainer.innerHTML = `<p style="opacity: 0.5;">No connected bots found. Configure your Discord settings above.</p>`;
+      botCount.textContent = "0 Active";
+      botCardsContainer.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 3rem; background: rgba(255,255,255,0.02); border-radius: var(--radius); border: 1px dashed var(--panel-border);">
+          <p style="color: var(--text-muted); font-size: 0.9rem;">No bots configured. Open <strong>Settings &gt; Discord</strong> to add your bot name.</p>
+        </div>
+      `;
     }
   }
 
