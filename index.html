@@ -14,8 +14,8 @@
   <!-- Header & Settings Navigation -->
   <header class="navbar">
     <div class="logo">
-      <span class="logo-icon">👨🏿‍🦱</span>
-      <span class="logo-text">Idk Man Im Tired</span>
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Bot Central</span>
     </div>
 
     <div class="settings-container">
@@ -35,34 +35,30 @@
         </div>
 
         <div class="tab-body">
-          <!-- WEBSITE TAB -->
           <div id="websiteTab" class="tab-content active">
             <div class="input-group">
               <label for="themeSelect">Website Theme</label>
-              <div class="custom-select-wrapper">
-                <select id="themeSelect">
-                  <option value="theme-dark">Dark Minimal</option>
-                  <option value="theme-midnight">Midnight Purple</option>
-                  <option value="theme-cyber">Cyber Neon</option>
-                </select>
-              </div>
+              <select id="themeSelect">
+                <option value="theme-dark">Dark Minimal</option>
+                <option value="theme-midnight">Midnight Purple</option>
+                <option value="theme-cyber">Cyber Neon</option>
+              </select>
             </div>
           </div>
 
-          <!-- DISCORD TAB -->
           <div id="discordTab" class="tab-content">
             <div class="input-group">
               <label for="botToken">Discord Bot Token</label>
               <div class="lock-wrapper">
                 <input type="password" id="botToken" class="font-mono" placeholder="MTI0..." disabled />
                 <button id="lockToggleBtn" class="lock-btn locked" title="Unlock to Edit">
-                  <svg class="lock-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
                 </button>
               </div>
             </div>
 
             <div class="input-group">
-              <label for="guildId">Target Guild ID (GUID)</label>
+              <label for="guildId">Start To This Discord Server (GUID)</label>
               <input type="text" id="guildId" class="font-mono" placeholder="102938475610293847" />
             </div>
 
@@ -81,16 +77,86 @@
     </div>
   </header>
 
-  <!-- Main Content Dashboard -->
   <main class="dashboard">
-    <div class="dashboard-header">
-      <h2>Connected Bots</h2>
-      <span class="badge-count" id="botCount">0 Active</span>
-    </div>
+    <!-- Manage Section -->
+    <section class="manage-section">
+      <h2 class="section-title">Manage</h2>
+      
+      <div class="manage-card">
+        <h3 class="card-title">Add Record</h3>
+        
+        <div class="form-grid">
+          <!-- Case Number -->
+          <div class="input-group">
+            <label for="caseNumber">Case Number</label>
+            <input type="text" id="caseNumber" placeholder="Blank for random 5-char ID (e.g. A9X2L)" maxlength="10" />
+          </div>
 
-    <div id="botCardsContainer" class="bot-grid">
-      <!-- Dynamic Bot Cards render here -->
-    </div>
+          <!-- Select User -->
+          <div class="input-group">
+            <label for="userSelect">Select User</label>
+            <div class="select-btn-wrapper">
+              <select id="userSelect">
+                <option value="">-- Choose User --</option>
+              </select>
+              <button type="button" id="loadUsersBtn" class="action-btn">Select &gt;</button>
+            </div>
+          </div>
+
+          <!-- Select Vehicle -->
+          <div class="input-group hidden" id="vehicleGroup">
+            <label for="vehicleSelect">Select Vehicle</label>
+            <select id="vehicleSelect">
+              <option value="">-- Choose Vehicle --</option>
+            </select>
+          </div>
+
+          <!-- Color Selection -->
+          <div class="input-group hidden" id="colorGroup">
+            <label>Color</label>
+            <div class="color-picker-wrapper">
+              <select id="colorSelect">
+                <option value="#ff4757">Red</option>
+                <option value="#2ed573">Green</option>
+                <option value="#1e90ff">Blue</option>
+                <option value="#eccc68">Yellow</option>
+                <option value="#a4b0be">Gray</option>
+                <option value="#ffa502">Orange</option>
+                <option value="#3742fa">Indigo</option>
+                <option value="#8e44ad">Purple</option>
+                <option value="#ffffff">White</option>
+                <option value="#2f3542">Black</option>
+              </select>
+              <input type="color" id="colorPickerSquare" value="#ff4757" title="Click to open full color square" />
+            </div>
+          </div>
+
+          <!-- Expiration / Duration -->
+          <div class="input-group hidden" id="durationGroup">
+            <label>Duration (+24 Hours Expiration)</label>
+            <input type="text" id="durationDisplay" class="font-mono" readonly />
+          </div>
+
+          <!-- Target Discord Channel ID -->
+          <div class="input-group hidden" id="channelGroup">
+            <label for="targetChannelId">Discord Channel ID</label>
+            <input type="text" id="targetChannelId" class="font-mono" placeholder="Channel ID to post record..." />
+          </div>
+        </div>
+
+        <!-- Submit Record Button -->
+        <button id="submitRecordBtn" class="submit-btn hidden">Submit Record</button>
+      </div>
+    </section>
+
+    <!-- Connected Bots Section -->
+    <section class="bots-section">
+      <div class="dashboard-header">
+        <h2>Connected Bots</h2>
+        <span class="badge-count" id="botCount">0 Active</span>
+      </div>
+      <div id="botCardsContainer" class="bot-grid"></div>
+    </section>
   </main>
 
   <script src="script.js"></script>
