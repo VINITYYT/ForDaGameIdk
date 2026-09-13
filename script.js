@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   updateDuration();
 
-  // Color Picker Sync (Dropdown <-> Color Square)
+  // Color Picker Sync
   colorSelect.addEventListener('change', (e) => {
     colorPickerSquare.value = e.target.value;
   });
@@ -79,12 +79,23 @@ document.addEventListener('DOMContentLoaded', () => {
     colorSelect.value = e.target.value;
   });
 
-  // Fetch Guild Members API Call
+  // Helper to get stored token
+  function getStoredToken() {
+    return botTokenInput.value.trim() || localStorage.getItem('botToken') || '';
+  }
+
+  // Fetch Guild Members API Call (Passes UI Bot Token in Header)
   loadUsersBtn.addEventListener('click', async () => {
     const rawGuildId = guildIdInput ? guildIdInput.value.trim() : '';
     const guildId = rawGuildId || localStorage.getItem('guildId');
+    const token = getStoredToken();
 
-    if (!guildId || guildId === '') {
+    if (!token) {
+      alert('Please enter your Discord Bot Token in Settings first!');
+      return;
+    }
+
+    if (!guildId) {
       alert('Please enter a Guild ID in Settings > Discord first!');
       return;
     }
@@ -92,7 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       loadUsersBtn.textContent = 'Loading...';
 
-      const res = await fetch(`/api/members?guildId=${encodeURIComponent(guildId)}`);
+      const res = await fetch(`/api/members?guildId=${encodeURIComponent(guildId)}`, {
+        headers: {
+          'x-bot-token': token
+        }
+      });
       const data = await res.json();
 
       if (!res.ok || data.error) {
@@ -131,17 +146,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Helper: Generate Random 5-Character Alphanumeric ID
   function generateRandomCaseId() {
     return Math.random().toString(36).substring(2, 7).toUpperCase();
   }
 
-  // Submit Record Handler
+  // Submit Record Handler (Passes UI Bot Token in Header)
   submitRecordBtn.addEventListener('click', async () => {
     let caseNo = document.getElementById('caseNumber').value.trim();
     if (!caseNo) {
       caseNo = generateRandomCaseId();
       document.getElementById('caseNumber').value = caseNo;
+    }
+
+    const token = getStoredToken();
+    if (!token) {
+      alert('Please enter your Discord Bot Token in Settings first!');
+      return;
     }
 
     const payload = {
@@ -162,7 +182,10 @@ document.addEventListener('DOMContentLoaded', () => {
       submitRecordBtn.textContent = 'Submitting...';
       const response = await fetch('/api/submit-record', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-bot-token': token
+        },
         body: JSON.stringify(payload)
       });
 
@@ -179,20 +202,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- SETTINGS DROPDOWN & DASHBOARD LOGIC ---
 
-  // Toggle Settings Popup
   settingsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsDropdown.classList.toggle('hidden');
   });
 
-  // Close Dropdown when clicking outside
   document.addEventListener('click', (e) => {
     if (!settingsDropdown.contains(e.target) && !settingsBtn.contains(e.target)) {
       settingsDropdown.classList.add('hidden');
     }
   });
 
-  // Tab Switching
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       tabBtns.forEach(b => b.classList.remove('active'));
@@ -202,13 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Website Theme Switcher
   themeSelect.addEventListener('change', (e) => {
     document.body.className = e.target.value;
     localStorage.setItem('theme', e.target.value);
   });
 
-  // Token Lock / Unlock Toggle
   let isTokenUnlocked = false;
   lockToggleBtn.addEventListener('click', () => {
     isTokenUnlocked = !isTokenUnlocked;
@@ -221,7 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Bot Token Enter Confirmation Flash
   botTokenInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       localStorage.setItem('botToken', botTokenInput.value.trim());
@@ -230,7 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Live update Guild ID on typing or pasting
   ['input', 'change', 'keyup'].forEach(eventType => {
     guildIdInput.addEventListener(eventType, () => {
       localStorage.setItem('guildId', guildIdInput.value.trim());
@@ -238,7 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Guild ID Enter Confirmation Flash
   guildIdInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       localStorage.setItem('guildId', guildIdInput.value.trim());
@@ -248,7 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Bot Name Handler with Validation Flashes
   botNameInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const name = botNameInput.value.trim();
@@ -271,7 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Dynamic Bot Card Dashboard Updates
   function updateBotDashboard() {
     const botName = localStorage.getItem('botName') || botNameInput.value.trim();
     const guildId = guildIdInput.value.trim() || localStorage.getItem('guildId');
@@ -301,7 +314,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Load Saved Settings from LocalStorage on Startup
   const loadSavedSettings = () => {
     const savedTheme = localStorage.getItem('theme') || 'theme-dark';
     document.body.className = savedTheme;
