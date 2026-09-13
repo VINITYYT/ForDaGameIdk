@@ -37,31 +37,44 @@ app.get('/api/members', async (req, res) => {
       return res.status(400).json({ error: 'No Guild ID provided!' });
     }
 
-    // Strip accidental "Bot " or "Bearer " prefixes if already attached
+    // Clean any accidental "Bot " or "Bearer " prefixes
     const cleanToken = token.replace(/^(Bot|Bearer)\s+/i, '').trim();
 
     console.log(`[DISCORD FETCH] Requesting members for Guild: ${guildId}`);
 
-    // Call Discord REST API with required "Bot " authorization prefix
+    // Call Discord REST API with mandatory User-Agent header
     const discordRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members?limit=1000`, {
+      method: 'GET',
       headers: {
         'Authorization': `Bot ${cleanToken}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-Agent': 'DiscordBot (https://fordagameidk.onrender.com, 1.0.0)' // Mandatory for Discord REST API
       }
     });
 
-    const data = await discordRes.json();
+    // Read response as text first to prevent JSON parse crashes
+    const rawText = await discordRes.text();
+    let data;
 
-    if (!discordRes.ok) {
-      console.error('[DISCORD API REJECTED]', data);
+    try {
+      data = JSON.parse(rawText);
+    } catch (parseErr) {
+      console.error('[DISCORD NON-JSON RESPONSE]', rawText.substring(0, 300));
       return res.status(discordRes.status).json({ 
-        error: data.message || `Discord Error (${discordRes.status}): Check Bot Permissions or Server Members Intent`
+        error: `Discord returned HTML (${discordRes.status}). Check if Guild ID is correct or if Bot is invited to server.` 
       });
     }
 
-    // Map Discord member objects to clean display options
+    if (!discordRes.ok) {
+      console.error('[DISCORD API ERROR]', data);
+      return res.status(discordRes.status).json({ 
+        error: data.message || `Discord Error ${discordRes.status}: Check permissions/intents.` 
+      });
+    }
+
+    // Filter out bots and format member list
     const members = data
-      .filter(m => !m.user.bot) // Filter out other bots
+      .filter(m => m.user && !m.user.bot)
       .map(m => ({
         id: m.user.id,
         username: m.user.username,
