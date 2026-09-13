@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     "Keytee Nube 390", "Koruna CRF450R", "Kazari KX450F", "Piran Flight T34"
   ];
 
-  // DOM Elements
+  // DOM Elements - Navigation & Settings
   const settingsBtn = document.getElementById('settingsBtn');
   const settingsDropdown = document.getElementById('settingsDropdown');
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const botNameInput = document.getElementById('botName');
   const errorTag = document.getElementById('errorTag');
   
-  // Manage Elements
+  // DOM Elements - Manage Add Record Form
   const userSelect = document.getElementById('userSelect');
   const loadUsersBtn = document.getElementById('loadUsersBtn');
   const vehicleGroup = document.getElementById('vehicleGroup');
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   updateDuration();
 
-  // Color Picker Sync
+  // Color Picker Sync (Dropdown <-> Color Square)
   colorSelect.addEventListener('change', (e) => {
     colorPickerSquare.value = e.target.value;
   });
@@ -79,9 +79,9 @@ document.addEventListener('DOMContentLoaded', () => {
     colorSelect.value = e.target.value;
   });
 
-  // Load Users via Server API using Guild ID
+  // Fetch Guild Members API Call
   loadUsersBtn.addEventListener('click', async () => {
-    const guildId = guildIdInput.value || localStorage.getItem('guildId');
+    const guildId = guildIdInput.value.trim() || localStorage.getItem('guildId');
     if (!guildId) {
       alert('Please enter a Guild ID in Settings > Discord first!');
       return;
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Step Sequential Reveals
+  // Sequential Step Reveals
   userSelect.addEventListener('change', () => {
     if (userSelect.value) {
       vehicleGroup.classList.remove('hidden');
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Generate 5-character Alphanumeric String
+  // Helper: Generate Random 5-Character Alphanumeric ID
   function generateRandomCaseId() {
     return Math.random().toString(36).substring(2, 7).toUpperCase();
   }
@@ -172,28 +172,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- SETTINGS DROPDOWN & PERSISTENCE ---
-  const loadSavedSettings = () => {
-    const savedTheme = localStorage.getItem('theme') || 'theme-dark';
-    document.body.className = savedTheme;
-    themeSelect.value = savedTheme;
-    botTokenInput.value = localStorage.getItem('botToken') || '';
-    guildIdInput.value = localStorage.getItem('guildId') || '';
-    botNameInput.value = localStorage.getItem('botName') || '';
-    updateBotDashboard();
-  };
+  // --- SETTINGS DROPDOWN & DASHBOARD LOGIC ---
 
+  // Toggle Settings Popup
   settingsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsDropdown.classList.toggle('hidden');
   });
 
+  // Close Dropdown when clicking outside
   document.addEventListener('click', (e) => {
     if (!settingsDropdown.contains(e.target) && !settingsBtn.contains(e.target)) {
       settingsDropdown.classList.add('hidden');
     }
   });
 
+  // Tab Switching
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       tabBtns.forEach(b => b.classList.remove('active'));
@@ -203,11 +197,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Website Theme Switcher
   themeSelect.addEventListener('change', (e) => {
     document.body.className = e.target.value;
     localStorage.setItem('theme', e.target.value);
   });
 
+  // Token Lock / Unlock Toggle
   let isTokenUnlocked = false;
   lockToggleBtn.addEventListener('click', () => {
     isTokenUnlocked = !isTokenUnlocked;
@@ -220,6 +216,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  botTokenInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      localStorage.setItem('botToken', botTokenInput.value.trim());
+      botTokenInput.classList.add('flash-green');
+      setTimeout(() => botTokenInput.classList.remove('flash-green'), 800);
+    }
+  });
+
+  // Save & Live Update Guild ID on input and change
+  ['input', 'change', 'keyup'].forEach(eventType => {
+    guildIdInput.addEventListener(eventType, () => {
+      localStorage.setItem('guildId', guildIdInput.value.trim());
+      updateBotDashboard();
+    });
+  });
+
+  // Bot Name Handler with Validation Flashes
   botNameInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const name = botNameInput.value.trim();
@@ -242,9 +255,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Dynamic Bot Card Dashboard Updates
   function updateBotDashboard() {
-    const botName = localStorage.getItem('botName');
-    const guildId = localStorage.getItem('guildId');
+    const botName = localStorage.getItem('botName') || botNameInput.value.trim();
+    const guildId = guildIdInput.value.trim() || localStorage.getItem('guildId');
+
     const container = document.getElementById('botCardsContainer');
     const count = document.getElementById('botCount');
 
@@ -260,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div>
           <h3>${botName}</h3>
-          <p class="font-mono">GUID: ${guildId || 'Not Set'}</p>
+          <p class="font-mono">GUID: ${guildId && guildId !== '' ? guildId : 'Not Set'}</p>
         </div>
       `;
       container.appendChild(card);
@@ -269,6 +284,19 @@ document.addEventListener('DOMContentLoaded', () => {
       container.innerHTML = `<p style="color: var(--text-muted);">No bot connected. Configure settings above.</p>`;
     }
   }
+
+  // Load Saved Settings from LocalStorage on Startup
+  const loadSavedSettings = () => {
+    const savedTheme = localStorage.getItem('theme') || 'theme-dark';
+    document.body.className = savedTheme;
+    themeSelect.value = savedTheme;
+
+    botTokenInput.value = localStorage.getItem('botToken') || '';
+    guildIdInput.value = localStorage.getItem('guildId') || '';
+    botNameInput.value = localStorage.getItem('botName') || '';
+
+    updateBotDashboard();
+  };
 
   loadSavedSettings();
 });
