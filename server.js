@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const { REST, Routes, EmbedBuilder } = require('discord.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -8,105 +8,75 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Single client instance
-let client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages
-  ]
-});
-
-// Helper: Ensure client is logged in with the token provided by the frontend UI
-async function ensureAuthenticated(token) {
-  if (!token) {
-    throw new Error('No Bot Token provided! Please enter your Discord Bot Token in Settings.');
-  }
-
-  // If already logged in with the exact same token, return client
-  if (client.isReady() && client.token === token) {
-    return client;
-  }
-
-  // If logged in with a different token, destroy previous connection
-  if (client.token && client.token !== token) {
-    await client.destroy();
-    client = new Client({
-      intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages
-      ]
-    });
-  }
-
-  // Log in with the token provided from the website UI
-  await client.login(token);
-  return client;
-}
-
 // Serve Main Page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Endpoint: Fetch Guild Members
+// Endpoint: Fetch Guild Members via Discord REST API
 app.get('/api/members', async (req, res) => {
   const { guildId } = req.query;
   const botToken = req.headers['x-bot-token'] || process.env.DISCORD_TOKEN;
+
+  if (!botToken) {
+    return res.status(400).json({ error: 'No Bot Token provided! Please enter your Bot Token in Settings.' });
+  }
 
   if (!guildId) {
     return res.status(400).json({ error: 'Guild ID is required.' });
   }
 
+  // Initialize REST client with user's token
+  const rest = new REST({ version: '10' }).setToken(botToken);
+
   try {
-    // Authenticate bot dynamically
-    const botClient = await ensureAuthenticated(botToken);
+    // Fetch up to 1000 members directly via HTTP REST
+    const members = await rest.get(Routes.guildMembers(guildId), {
+      query: new URLSearchParams({ limit: 1000 })
+    });
 
-    const guild = await botClient.guilds.fetch(guildId);
-    if (!guild) {
-      return res.status(404).json({ error: 'Guild not found or bot is not in this server.' });
-    }
-
-    const members = await guild.members.fetch();
     const memberList = members
       .filter(m => !m.user.bot)
       .map(m => ({
         id: m.user.id,
         username: m.user.username,
-        displayName: m.displayName || m.user.username
+        displayName: m.nick || m.user.global_name || m.user.username
       }));
 
     res.json(memberList);
   } catch (err) {
     console.error("--- Error in /api/members ---", err);
+
     let errorMsg = err.message || 'Failed to fetch guild members.';
 
-    if (err.code === 'TOKEN_INVALID' || err.message.includes('An invalid token')) {
-      errorMsg = 'Invalid Bot Token! Please check your token in Settings > Discord.';
-    } else if (err.code === 50001) {
-      errorMsg = 'Bot lacks permissions or is not in that server.';
-    } else if (err.code === 50035 || err.message.includes('disallowed intents')) {
-      errorMsg = 'Guild Members Intent is disabled in Discord Developer Portal!';
+    if (err.status === 401 || err.code === 0) {
+      errorMsg = 'Invalid Bot Token! Check your token in Settings > Discord.';
+    } else if (err.status === 403 || err.code === 50001) {
+      errorMsg = 'Bot is not in that server, or Server Members Intent is disabled in Discord Developer Portal!';
+    } else if (err.status === 404 || err.code === 10004) {
+      errorMsg = 'Unknown Guild ID. Double check your server ID in Settings.';
     }
 
     res.status(500).json({ error: errorMsg });
   }
 });
 
-// Endpoint: Submit Record to Discord Channel
+// Endpoint: Submit Record to Discord Channel via REST API
 app.post('/api/submit-record', async (req, res) => {
   const { channelId, caseNumber, user, vehicle, color, duration } = req.body;
   const botToken = req.headers['x-bot-token'] || process.env.DISCORD_TOKEN;
 
-  if (!channelId) return res.status(400).json({ error: 'Target Channel ID is required' });
+  if (!botToken) {
+    return res.status(400).json({ error: 'No Bot Token provided! Enter your Bot Token in Settings.' });
+  }
+
+  if (!channelId) {
+    return res.status(400).json({ error: 'Target Channel ID is required.' });
+  }
+
+  const rest = new REST({ version: '10' }).setToken(botToken);
 
   try {
-    const botClient = await ensureAuthenticated(botToken);
-
-    const channel = await botClient.channels.fetch(channelId);
-    if (!channel) return res.status(404).json({ error: 'Channel not found' });
-
     const embed = new EmbedBuilder()
       .setTitle(`📋 New Record Registered: #${caseNumber}`)
       .setColor(color && color.startsWith('#') ? color : '#5865F2')
@@ -119,11 +89,20 @@ app.post('/api/submit-record', async (req, res) => {
       )
       .setTimestamp();
 
-    await channel.send({ embeds: [embed] });
+    await rest.post(Routes.channelMessages(channelId), {
+      body: { embeds: [embed.toJSON()] }
+    });
+
     res.json({ success: true, message: 'Record posted successfully!' });
   } catch (err) {
     console.error("--- Error in /api/submit-record ---", err);
-    res.status(500).json({ error: err.message || 'Failed to send message to Discord channel' });
+
+    let errorMsg = err.message || 'Failed to send message to Discord channel.';
+    if (err.status === 401) errorMsg = 'Invalid Bot Token!';
+    if (err.status === 403) errorMsg = 'Bot lacks permission to send messages in that channel!';
+    if (err.status === 404) errorMsg = 'Unknown Channel ID!';
+
+    res.status(500).json({ error: errorMsg });
   }
 });
 
