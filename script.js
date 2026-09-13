@@ -82,9 +82,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- BOT TOKEN & GREEN LOCK OBFUSCATION CONTROLLER ---
   let realBotToken = localStorage.getItem('botToken') || '';
 
-  // Reliable token retriever for API calls
+  // Fail-safe token retriever
   function getStoredToken() {
-    return realBotToken || localStorage.getItem('botToken') || '';
+    const el = document.getElementById('botToken');
+    const directValue = el ? el.value.trim() : '';
+    const stored = localStorage.getItem('botToken') || '';
+    
+    // Return whichever non-empty token exists
+    return realBotToken || stored || directValue || '';
   }
 
   // Lock and obfuscate field visually using native password masking
